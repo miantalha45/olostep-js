@@ -187,6 +187,11 @@ const handleErrorResponse = (context: ErrorContext): never => {
       throw new OlostepServerFeatureApprovalRequired(details);
     }
     case 404:
+      // Unknown method/path. The API used to answer with an AWS 403 (handled above);
+      // it now sends a 404 titled "route not found" instead of e.g. "batch not found".
+      if (bodyRecord?.title === 'route not found') {
+        throw new OlostepServerInvalidEndpointCalled(request, response);
+      }
       if (isNotEnoughResources) {
         throw new OlostepServerOutOfResources(details);
       }

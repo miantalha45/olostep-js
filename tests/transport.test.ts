@@ -10,6 +10,7 @@ import {
   OlostepServerAuthFailed,
   OlostepServerBlacklistedDomain,
   OlostepServerCreditsExhausted,
+  OlostepServerInvalidEndpointCalled,
   OlostepServerResourceNotFound,
   OlostepServerTemporaryIssue
 } from '../src/errors.js';
@@ -80,6 +81,21 @@ describe('error handling', () => {
     const error = await client().scrapes.create({url: 'https://blocked.example'}).catch((err) => err);
 
     expect(causeOf(error)).toBeInstanceOf(OlostepServerBlacklistedDomain);
+  });
+
+  test('an unknown route is reported as an invalid endpoint, not a missing resource', async () => {
+    replies = [{status: 404, body: {object: 'error', code: 'not_found', status: 404, title: 'route not found', metadata: {}}}];
+    const error = await client().scrapes.create({url: 'https://example.com'}).catch((err) => err);
+
+    expect(causeOf(error)).toBeInstanceOf(OlostepServerInvalidEndpointCalled);
+    expect(requests).toHaveLength(1);
+  });
+
+  test('a missing batch is still a missing resource', async () => {
+    replies = [{status: 404, body: {object: 'error', code: 'not_found', status: 404, title: 'batch not found', metadata: {resource: 'batch', id: 'batch_1'}}}];
+    const error = await client().batches.info('batch_1').catch((err) => err);
+
+    expect(causeOf(error)).toBeInstanceOf(OlostepServerResourceNotFound);
   });
 
   test('a missing resource is not retried', async () => {
